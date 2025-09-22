@@ -1,6 +1,6 @@
-import google.genai as genai
+from google import genai
 import streamlit as st
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from PIL import Image
 import io
 import base64
@@ -13,21 +13,38 @@ class GeminiClient:
         if not api_key:
             raise ValueError("API key is required")
         
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
-        self.chat = None
+        # Set the API key in environment-like way for genai.Client()
+        import os
+        os.environ['GEMINI_API_KEY'] = api_key
+        
+        self.client = genai.Client()
+        self.conversation_history = []
     
-    def start_conversation(self) -> None:
-        """Start a new conversation"""
-        self.chat = self.model.start_chat(history=[])
+    def generate_image(self, prompt: str) -> Optional[str]:
+        """Generate image using Gemini Flash"""
+        try:
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash-exp",
+                contents=f"Generate an image: {prompt}"
+            )
+            return response.text
+        except Exception as e:
+            st.error(f"Error generating image: {str(e)}")
+            return None
     
     def send_message(self, message: str, image: Optional[Image.Image] = None) -> str:
-        """Send a message to Gemini, optionally with an image"""
+        """Send a message to Gemini"""
         try:
             if image:
-                response = self.chat.send_message([message, image])
+                # Convert image to format Gemini can understand
+                contents = [message, image]
             else:
-                response = self.chat.send_message(message)
+                contents = message
+                
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash-exp",
+                contents=contents
+            )
             return response.text
         except Exception as e:
             st.error(f"Error communicating with Gemini: {str(e)}")
@@ -36,7 +53,10 @@ class GeminiClient:
     def analyze_image(self, image: Image.Image, prompt: str = "Describe this image") -> str:
         """Analyze an image with a specific prompt"""
         try:
-            response = self.model.generate_content([prompt, image])
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash-exp",
+                contents=[prompt, image]
+            )
             return response.text
         except Exception as e:
             st.error(f"Error analyzing image: {str(e)}")
@@ -46,9 +66,13 @@ class GeminiClient:
     def validate_connection(api_key: str) -> bool:
         """Test if the API key works"""
         try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content("Hello")
+            import os
+            os.environ['GEMINI_API_KEY'] = api_key
+            client = genai.Client()
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-exp",
+                contents="Hello"
+            )
             return True
         except Exception:
             return False
