@@ -1,4 +1,4 @@
-import google.generativeai as genai
+import google.genai as genai
 import streamlit as st
 from typing import Optional, List, Dict, Any
 from PIL import Image
