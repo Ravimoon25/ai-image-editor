@@ -1,1 +1,7 @@
-
+streamlit
+google-genai
+Pillow
+opencv-python-headless
+numpy
+python-dotenv
+requests
